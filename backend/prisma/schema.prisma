@@ -1,0 +1,161 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Models will be added in Day 3+ (Product, Category, Supplier, etc.)
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum PurchaseOrderStatus {
+  PENDING
+  RECEIVED
+  CANCELLED
+}
+
+enum SaleStatus {
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String   // bcrypt hash, never store plaintext
+  role      Role     @default(STAFF)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products  Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id                 String    @id @default(cuid())
+  name               String
+  sku                String    @unique
+  description        String?
+  price              Float     // selling price
+  costPrice          Float?    // purchase cost, optional (used later for profit reports)
+  quantity           Int       @default(0)
+  lowStockThreshold  Int       @default(10)
+  imageUrl           String?   // wired up on Day 25
+
+  categoryId         String?
+  category           Category? @relation(fields: [categoryId], references: [id])
+  purchaseOrderItems PurchaseOrderItem[]
+  salesOrderItems    SalesOrderItem[]
+
+  isDeleted          Boolean   @default(false) // soft delete — never hard-delete products
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("products")
+}
+
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id           String               @id @default(cuid())
+  supplierId   String
+  supplier     Supplier             @relation(fields: [supplierId], references: [id])
+  status       PurchaseOrderStatus  @default(PENDING)
+  orderDate    DateTime             @default(now())
+  receivedDate DateTime?
+
+  items        PurchaseOrderItem[]
+
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Int
+  unitCost        Float
+
+  @@map("purchase_order_items")
+}
+
+model Customer {
+  id          String       @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  salesOrders SalesOrder[]
+
+  @@map("customers")
+}
+
+model SalesOrder {
+  id          String           @id @default(cuid())
+  customerId  String?
+  customer    Customer?        @relation(fields: [customerId], references: [id])
+  status      SaleStatus       @default(COMPLETED)
+  totalAmount Float
+
+  items       SalesOrderItem[]
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id           String     @id @default(cuid())
+  salesOrderId String
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id])
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+  quantity     Int
+  unitPrice    Float      // snapshot of product price at time of sale
+  subtotal     Float
+
+  @@map("sales_order_items")
+}

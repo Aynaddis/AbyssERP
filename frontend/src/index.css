@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Slate & Amber — light mode */
+  --color-bg: #f7f7f5;
+  --color-panel: #ffffff;
+  --color-panel-2: #f0f0ec;
+  --color-border: #e2e2dc;
+  --color-text: #22242a;
+  --color-muted: #6e7280;
+  --color-accent: #d98c00;
+  --color-accent-2: #2f6fb8;
+}
+
+.dark {
+  /* Slate & Amber — dark mode */
+  --color-bg: #111318;
+  --color-panel: #191c22;
+  --color-panel-2: #20242c;
+  --color-border: #2c313b;
+  --color-text: #e8e9ee;
+  --color-muted: #8d93a1;
+  --color-accent: #f0a500;
+  --color-accent-2: #4a90e2;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  transition: background 0.2s ease, color 0.2s ease;
+}
