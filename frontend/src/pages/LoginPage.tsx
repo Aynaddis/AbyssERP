@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { loginRequest } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -71,8 +72,7 @@ export default function LoginPage() {
             <label className="block text-xs font-medium text-[var(--color-muted)] mb-1">
               Password
             </label>
-            <input
-              type="password"
+            <PasswordInput
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}

@@ -12,6 +12,8 @@ import {
   softDeleteProduct,
   getLowStockProducts,
 } from '../services/product.service';
+import { logAudit } from '../services/audit.service';
+import { notifyLowStockIfNeeded } from '../services/notification.service';
 import { AppError } from '../middleware/errorHandler';
 
 export async function getProducts(req: Request, res: Response, next: NextFunction) {
@@ -45,6 +47,13 @@ export async function postProduct(req: Request, res: Response, next: NextFunctio
     }
 
     const product = await createProduct(parsed.data);
+    await logAudit({
+      userId: req.user?.userId,
+      action: 'CREATE',
+      entityType: 'Product',
+      entityId: product.id,
+      description: `Created product "${product.name}" (SKU: ${product.sku})`,
+    });
     res.status(201).json({ product });
   } catch (err) {
     next(err);
@@ -59,6 +68,21 @@ export async function putProduct(req: Request, res: Response, next: NextFunction
     }
 
     const product = await updateProduct(String(req.params.id), parsed.data);
+    const stockChanged = parsed.data.quantity !== undefined;
+    await logAudit({
+      userId: req.user?.userId,
+      action: 'UPDATE',
+      entityType: 'Product',
+      entityId: product.id,
+      description: stockChanged
+        ? `Updated product "${product.name}" — stock set to ${product.quantity}`
+        : `Updated product "${product.name}"`,
+    });
+
+    if (stockChanged && product.quantity <= product.lowStockThreshold) {
+      await notifyLowStockIfNeeded(product.id, product.name, product.quantity);
+    }
+
     res.status(200).json({ product });
   } catch (err) {
     next(err);
@@ -67,7 +91,18 @@ export async function putProduct(req: Request, res: Response, next: NextFunction
 
 export async function deleteProduct(req: Request, res: Response, next: NextFunction) {
   try {
-    await softDeleteProduct(String(req.params.id));
+    const id = String(req.params.id);
+    const product = await getProductById(id);
+    await softDeleteProduct(id);
+
+    await logAudit({
+      userId: req.user?.userId,
+      action: 'DELETE',
+      entityType: 'Product',
+      entityId: id,
+      description: `Deleted product "${product.name}"`,
+    });
+
     res.status(200).json({ message: 'Product deleted' });
   } catch (err) {
     next(err);

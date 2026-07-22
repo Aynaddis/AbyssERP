@@ -7,6 +7,8 @@ import {
   receivePurchaseOrder,
   cancelPurchaseOrder,
 } from '../services/purchase.service';
+import { logAudit } from '../services/audit.service';
+import { notify } from '../services/notification.service';
 import { AppError } from '../middleware/errorHandler';
 
 export async function getPurchaseOrders(_req: Request, res: Response, next: NextFunction) {
@@ -44,6 +46,22 @@ export async function postPurchaseOrder(req: Request, res: Response, next: NextF
 export async function postReceivePurchaseOrder(req: Request, res: Response, next: NextFunction) {
   try {
     const order = await receivePurchaseOrder(String(req.params.id));
+    await logAudit({
+      userId: req.user?.userId,
+      action: 'RECEIVE',
+      entityType: 'PurchaseOrder',
+      entityId: order.id,
+      description: `Received purchase order from "${order.supplier.name}" — stock incremented for ${order.items.length} item(s)`,
+    });
+
+    await notify({
+      type: 'PO_RECEIVED',
+      message: `Purchase order from "${order.supplier.name}" received`,
+      visibleToRoles: ['ADMIN', 'MANAGER'],
+      entityType: 'PurchaseOrder',
+      entityId: order.id,
+    });
+
     res.status(200).json({ order });
   } catch (err) {
     next(err);

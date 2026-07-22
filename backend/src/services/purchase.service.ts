@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma';
 import type { Prisma } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import type { CreatePurchaseOrderInput } from '../utils/validation/purchase.schema';
+import { recordTransaction } from './transaction.service';
 
 export async function listPurchaseOrders() {
   return prisma.purchaseOrder.findMany({
@@ -77,7 +78,10 @@ export async function receivePurchaseOrder(id: string) {
   }
 
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    let totalCost = 0;
+
     for (const item of po.items) {
+      totalCost += item.quantity * item.unitCost;
       await tx.product.update({
         where: { id: item.productId },
         data: {
@@ -87,7 +91,7 @@ export async function receivePurchaseOrder(id: string) {
       });
     }
 
-    return tx.purchaseOrder.update({
+    const updatedPo = await tx.purchaseOrder.update({
       where: { id },
       data: { status: 'RECEIVED', receivedDate: new Date() },
       include: {
@@ -95,6 +99,16 @@ export async function receivePurchaseOrder(id: string) {
         items: { include: { product: true } },
       },
     });
+
+    await recordTransaction(tx, {
+      type: 'EXPENSE',
+      amount: totalCost,
+      description: `Purchase order received from ${updatedPo.supplier.name}`,
+      referenceType: 'PURCHASE_ORDER',
+      referenceId: updatedPo.id,
+    });
+
+    return updatedPo;
   });
 }
 

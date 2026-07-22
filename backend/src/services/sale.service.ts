@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma';
 import type { Prisma } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import type { CreateSaleInput } from '../utils/validation/sale.schema';
+import { recordTransaction } from './transaction.service';
 
 export async function listSales() {
   return prisma.salesOrder.findMany({
@@ -88,7 +89,7 @@ export async function createSale(input: CreateSaleInput) {
       });
     }
 
-    return tx.salesOrder.create({
+    const sale = await tx.salesOrder.create({
       data: {
         customerId: input.customerId,
         status: 'COMPLETED',
@@ -100,6 +101,16 @@ export async function createSale(input: CreateSaleInput) {
         items: { include: { product: true } },
       },
     });
+
+    await recordTransaction(tx, {
+      type: 'INCOME',
+      amount: totalAmount,
+      description: `Sale #${sale.id.slice(-8)}${sale.customer ? ` to ${sale.customer.name}` : ''}`,
+      referenceType: 'SALE',
+      referenceId: sale.id,
+    });
+
+    return sale;
   });
 }
 

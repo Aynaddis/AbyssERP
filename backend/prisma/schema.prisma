@@ -29,7 +29,10 @@ enum SaleStatus {
   COMPLETED
   CANCELLED
 }
-
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -39,6 +42,8 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  auditLogs AuditLog[]
 
   @@map("users")
 }
@@ -158,4 +163,74 @@ model SalesOrderItem {
   subtotal     Float
 
   @@map("sales_order_items")
+}
+model Employee {
+  id         String   @id @default(cuid())
+  name       String
+  email      String?  @unique
+  phone      String?
+  department String
+  position   String?
+  salary     Float
+  hireDate   DateTime @default(now())
+  isActive   Boolean  @default(true) // deactivate instead of hard-delete
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("employees")
+}
+
+model Transaction {
+  id            String          @id @default(cuid())
+  type          TransactionType
+  amount        Float
+  description   String
+
+  // Set automatically when a sale/purchase triggers this transaction;
+  // null for manually-entered transactions (rent, utilities, etc.)
+  referenceType String?
+  referenceId   String?
+
+  createdAt     DateTime        @default(now())
+
+  @@map("transactions")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String   // e.g. "CREATE", "UPDATE", "DELETE", "RECEIVE", "CANCEL"
+  entityType  String   // e.g. "Product", "Sale", "PurchaseOrder", "Employee"
+  entityId    String
+  description String   // human-readable summary, e.g. Updated product "Wireless Keyboard"
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+}
+model BusinessSettings {
+  id                     String   @id @default("singleton")
+  businessName           String   @default("AbyssERP")
+  businessLogoUrl        String?
+  currency               String   @default("ETB")
+  taxRate                Float?
+  notifyLowStock         Boolean  @default(true)
+  notifyNewSale          Boolean  @default(false)
+  updatedAt              DateTime @updatedAt
+
+  @@map("business_settings")
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  type           String
+  message        String
+  isRead         Boolean  @default(false)
+  visibleToRoles Role[]
+  entityType     String?
+  entityId       String?
+  createdAt      DateTime @default(now())
+
+  @@map("notifications")
 }

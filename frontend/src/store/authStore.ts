@@ -8,6 +8,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: UserRole;
+  avatarUrl?: string | null;
 }
 
 interface AuthState {
@@ -17,6 +18,7 @@ interface AuthState {
   login: (user: AuthUser, token: string) => void;
   logout: () => void;
   hasRole: (...roles: UserRole[]) => boolean;
+  updateUser: (partial: Partial<AuthUser>) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -33,6 +35,11 @@ export const useAuthStore = create<AuthState>()(
       hasRole: (...roles) => {
         const role = get().user?.role;
         return role ? roles.includes(role) : false;
+      },
+
+      updateUser: (partial) => {
+        const current = get().user;
+        if (current) set({ user: { ...current, ...partial } });
       },
     }),
     { name: 'abysserp-auth' }, // localStorage key

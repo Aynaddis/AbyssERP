@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { registerRequest } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -87,8 +88,7 @@ export default function RegisterPage() {
             <label className="block text-xs font-medium text-[var(--color-muted)] mb-1">
               Password
             </label>
-            <input
-              type="password"
+            <PasswordInput
               required
               minLength={6}
               value={password}
