@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { createEmployeeSchema, updateEmployeeSchema } from '../utils/validation/employee.schema';
+import { createEmployeeSchema, updateEmployeeSchema, listEmployeesQuerySchema } from '../utils/validation/employee.schema';
 import {
     listEmployees,
     getEmployeeById,
@@ -14,9 +14,12 @@ import { AppError } from '../middleware/errorHandler';
 
 export async function getEmployees(req: Request, res: Response, next: NextFunction) {
     try {
-        const includeInactive = req.query.includeInactive === 'true';
-        const employees = await listEmployees(includeInactive);
-        res.status(200).json({ employees });
+        const parsed = listEmployeesQuerySchema.safeParse(req.query);
+        if (!parsed.success) {
+            throw new AppError(parsed.error.issues[0].message, 400);
+        }
+        const result = await listEmployees(parsed.data);
+        res.status(200).json(result);
     } catch (err) {
         next(err);
     }
