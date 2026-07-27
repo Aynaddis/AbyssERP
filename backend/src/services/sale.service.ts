@@ -1,17 +1,56 @@
 import { prisma } from '../config/prisma';
 import type { Prisma } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
-import type { CreateSaleInput } from '../utils/validation/sale.schema';
+import type { CreateSaleInput, ListSalesQuery } from '../utils/validation/sale.schema';
 import { recordTransaction } from './transaction.service';
 
-export async function listSales() {
-  return prisma.salesOrder.findMany({
-    include: {
-      customer: true,
-      items: { include: { product: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+function startOfRange(range: 'today' | 'week' | 'month'): Date {
+  const now = new Date();
+  if (range === 'today') {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  if (range === 'week') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - 7);
+    return start;
+  }
+  const start = new Date(now);
+  start.setMonth(now.getMonth() - 1);
+  return start;
+}
+
+export async function listSales(query: ListSalesQuery) {
+  const { search, dateRange, status, page, limit } = query;
+
+  const where = {
+    ...(status && { status }),
+    ...(dateRange && { createdAt: { gte: startOfRange(dateRange) } }),
+    ...(search && {
+      OR: [
+        { id: { contains: search, mode: 'insensitive' as const } },
+        { customer: { name: { contains: search, mode: 'insensitive' as const } } },
+      ],
+    }),
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.salesOrder.findMany({
+      where,
+      include: {
+        customer: true,
+        items: { include: { product: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.salesOrder.count({ where }),
+  ]);
+
+  return {
+    items,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
 }
 
 export async function getSaleById(id: string) {
@@ -82,12 +121,14 @@ export async function createSale(input: CreateSaleInput) {
       };
     });
 
-    for (const item of input.items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { quantity: { decrement: item.quantity } },
-      });
-    }
+    await Promise.all(
+      input.items.map((item) =>
+        tx.product.update({
+          where: { id: item.productId },
+          data: { quantity: { decrement: item.quantity } },
+        }),
+      ),
+    );
 
     const sale = await tx.salesOrder.create({
       data: {

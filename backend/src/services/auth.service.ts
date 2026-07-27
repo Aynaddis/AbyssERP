@@ -4,7 +4,7 @@ import { signToken } from '../utils/jwt';
 import { AppError } from '../middleware/errorHandler';
 import type { RegisterInput, LoginInput, UpdateProfileInput, ChangePasswordInput } from '../utils/validation/auth.schema';
 
-const SALT_ROUNDS = 10;
+export const SALT_ROUNDS = 10;
 
 export async function registerUser(input: RegisterInput) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
@@ -14,12 +14,15 @@ export async function registerUser(input: RegisterInput) {
 
   const hashedPassword = await bcrypt.hash(input.password, SALT_ROUNDS);
 
+  // Public self-registration always creates a STAFF account — any role picked
+  // by an admin goes through the "Add Employee" flow instead, which links a
+  // login account to an HR record and emails the credentials.
   const user = await prisma.user.create({
     data: {
       name: input.name,
       email: input.email,
       password: hashedPassword,
-      role: input.role ?? 'STAFF',
+      role: 'STAFF',
     },
   });
 
@@ -86,5 +89,8 @@ export async function changePassword(userId: string, input: ChangePasswordInput)
   }
 
   const hashedPassword = await bcrypt.hash(input.newPassword, SALT_ROUNDS);
-  await prisma.user.update({ where: { id: userId }, data: { password: hashedPassword } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashedPassword, mustChangePassword: false },
+  });
 }

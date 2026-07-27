@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, UserX, UserCheck } from 'lucide-react';
+import { Plus, Pencil, UserX, UserCheck, Search } from 'lucide-react';
 import { listEmployees, deactivateEmployee, reactivateEmployee } from '@/api/employees';
 import { useAuthStore } from '@/store/authStore';
 import { EmployeeFormModal } from '@/components/EmployeeFormModal';
@@ -14,11 +14,29 @@ export default function HRPage() {
 
     const [editingEmployee, setEditingEmployee] = useState<Employee | null | undefined>(undefined);
     const [showInactive, setShowInactive] = useState(false);
+    const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [page, setPage] = useState(1);
 
-    const { data: employees, isLoading } = useQuery({
-        queryKey: ['employees', { showInactive: canDeactivate && showInactive }],
-        queryFn: () => listEmployees(canDeactivate && showInactive),
+    useEffect(() => {
+        const timeout = setTimeout(() => setDebouncedSearch(search), 300);
+        return () => clearTimeout(timeout);
+    }, [search]);
+
+    useEffect(() => setPage(1), [debouncedSearch, showInactive]);
+
+    const { data: result, isLoading } = useQuery({
+        queryKey: ['employees', { search: debouncedSearch, showInactive: canDeactivate && showInactive, page }],
+        queryFn: () =>
+            listEmployees({
+                search: debouncedSearch || undefined,
+                includeInactive: canDeactivate && showInactive,
+                page,
+                limit: 10,
+            }),
     });
+
+    const employees = result?.items;
 
     const deactivateMutation = useMutation({
         mutationFn: deactivateEmployee,
@@ -52,7 +70,7 @@ export default function HRPage() {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <div>
                     <h1 className="text-xl font-bold">HR</h1>
                     <p className="text-sm text-[var(--color-muted)]">{activeCount} active employees</p>
@@ -66,17 +84,28 @@ export default function HRPage() {
                 </button>
             </div>
 
-            {canDeactivate && (
-                <label className="flex items-center gap-2 mb-4 text-sm cursor-pointer w-fit">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+                <div className="relative flex-1 min-w-[200px]">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
                     <input
-                        type="checkbox"
-                        checked={showInactive}
-                        onChange={(e) => setShowInactive(e.target.checked)}
-                        className="accent-[var(--color-accent)]"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search by name..."
+                        className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] pl-9 pr-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
                     />
-                    <span className="text-[var(--color-muted)]">Show deactivated employees</span>
-                </label>
-            )}
+                </div>
+                {canDeactivate && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer w-fit shrink-0">
+                        <input
+                            type="checkbox"
+                            checked={showInactive}
+                            onChange={(e) => setShowInactive(e.target.checked)}
+                            className="accent-[var(--color-accent)]"
+                        />
+                        <span className="text-[var(--color-muted)]">Show deactivated</span>
+                    </label>
+                )}
+            </div>
 
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] overflow-hidden">
                 <div className="overflow-x-auto">
@@ -84,6 +113,7 @@ export default function HRPage() {
                         <thead>
                             <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-muted)]">
                                 <th className="px-4 py-3 font-medium">Name</th>
+                                <th className="px-4 py-3 font-medium">Role</th>
                                 <th className="px-4 py-3 font-medium">Department</th>
                                 <th className="px-4 py-3 font-medium">Position</th>
                                 <th className="px-4 py-3 font-medium">Salary</th>
@@ -95,15 +125,15 @@ export default function HRPage() {
                         <tbody>
                             {isLoading && (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-8 text-center text-[var(--color-muted)]">
+                                    <td colSpan={8} className="px-4 py-8 text-center text-[var(--color-muted)]">
                                         Loading...
                                     </td>
                                 </tr>
                             )}
                             {!isLoading && employees?.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-8 text-center text-[var(--color-muted)]">
-                                        No employees yet.
+                                    <td colSpan={8} className="px-4 py-8 text-center text-[var(--color-muted)]">
+                                        No employees found.
                                     </td>
                                 </tr>
                             )}
@@ -114,6 +144,7 @@ export default function HRPage() {
                                         }`}
                                 >
                                     <td className="px-4 py-3 font-medium">{emp.name}</td>
+                                    <td className="px-4 py-3 text-[var(--color-muted)]">{emp.role}</td>
                                     <td className="px-4 py-3 text-[var(--color-muted)]">{emp.department}</td>
                                     <td className="px-4 py-3 text-[var(--color-muted)]">{emp.position ?? '—'}</td>
                                     <td className="px-4 py-3">${emp.salary.toLocaleString()}</td>
@@ -172,6 +203,30 @@ export default function HRPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {result && result.pagination.totalPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)] text-xs text-[var(--color-muted)]">
+                        <span>
+                            Page {result.pagination.page} of {result.pagination.totalPages}
+                        </span>
+                        <div className="flex gap-2">
+                            <button
+                                disabled={page <= 1}
+                                onClick={() => setPage((p) => p - 1)}
+                                className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 disabled:opacity-40 hover:bg-[var(--color-panel-2)] transition-colors"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                disabled={page >= result.pagination.totalPages}
+                                onClick={() => setPage((p) => p + 1)}
+                                className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 disabled:opacity-40 hover:bg-[var(--color-panel-2)] transition-colors"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {editingEmployee !== undefined && (

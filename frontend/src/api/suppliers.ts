@@ -1,4 +1,5 @@
 import { api } from './axios';
+import type { PaginatedResult } from '@/types/inventory';
 import type { Supplier } from '@/types/purchasing';
 
 export interface SupplierInput {
@@ -8,9 +9,15 @@ export interface SupplierInput {
     address?: string;
 }
 
-export async function listSuppliers(): Promise<Supplier[]> {
-    const { data } = await api.get<{ suppliers: Supplier[] }>('/suppliers');
-    return data.suppliers;
+export interface ListSuppliersParams {
+    search?: string;
+    page?: number;
+    limit?: number;
+}
+
+export async function listSuppliers(params: ListSuppliersParams = {}): Promise<PaginatedResult<Supplier>> {
+    const { data } = await api.get<PaginatedResult<Supplier>>('/suppliers', { params });
+    return data;
 }
 
 export async function createSupplier(input: SupplierInput): Promise<Supplier> {

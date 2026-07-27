@@ -1,9 +1,33 @@
 import { prisma } from '../config/prisma';
 import { AppError } from '../middleware/errorHandler';
-import type { CreateSupplierInput, UpdateSupplierInput } from '../utils/validation/purchase.schema';
+import type { CreateSupplierInput, UpdateSupplierInput, ListSuppliersQuery } from '../utils/validation/purchase.schema';
 
-export async function listSuppliers() {
-  return prisma.supplier.findMany({ orderBy: { name: 'asc' } });
+export async function listSuppliers(query: ListSuppliersQuery) {
+  const { search, page, limit } = query;
+
+  const where = search
+    ? {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { email: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }
+    : {};
+
+  const [items, total] = await Promise.all([
+    prisma.supplier.findMany({
+      where,
+      orderBy: { name: 'asc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.supplier.count({ where }),
+  ]);
+
+  return {
+    items,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
 }
 
 export async function getSupplierById(id: string) {

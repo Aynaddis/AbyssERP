@@ -23,3 +23,19 @@ export const createPurchaseOrderSchema = z.object({
 export type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
 export type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>;
 export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>;
+
+export const listSuppliersQuerySchema = z.object({
+  search: z.string().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export const listPurchaseOrdersQuerySchema = z.object({
+  search: z.string().optional(),
+  status: z.enum(['PENDING', 'RECEIVED', 'CANCELLED']).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export type ListSuppliersQuery = z.infer<typeof listSuppliersQuerySchema>;
+export type ListPurchaseOrdersQuery = z.infer<typeof listPurchaseOrdersQuerySchema>;

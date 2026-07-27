@@ -34,16 +34,19 @@ enum TransactionType {
   EXPENSE
 }
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String   // bcrypt hash, never store plaintext
-  role      Role     @default(STAFF)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  name               String
+  email              String   @unique
+  password           String   // bcrypt hash, never store plaintext
+  role               Role     @default(STAFF)
+  isActive           Boolean  @default(true)
+  avatarUrl          String?
+  mustChangePassword Boolean  @default(false) // true for accounts created by an admin, until first password change
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   auditLogs AuditLog[]
+  employee  Employee?
 
   @@map("users")
 }
@@ -79,6 +82,8 @@ model Product {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
+  @@index([isDeleted])
+  @@index([createdAt])
   @@map("products")
 }
 
@@ -93,6 +98,7 @@ model Supplier {
 
   purchaseOrders PurchaseOrder[]
 
+  @@index([name])
   @@map("suppliers")
 }
 
@@ -109,6 +115,8 @@ model PurchaseOrder {
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
 
+  @@index([status])
+  @@index([createdAt])
   @@map("purchase_orders")
 }
 
@@ -149,6 +157,8 @@ model SalesOrder {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  @@index([status])
+  @@index([createdAt])
   @@map("sales_orders")
 }
 
@@ -167,7 +177,7 @@ model SalesOrderItem {
 model Employee {
   id         String   @id @default(cuid())
   name       String
-  email      String?  @unique
+  email      String   @unique
   phone      String?
   department String
   position   String?
@@ -175,9 +185,15 @@ model Employee {
   hireDate   DateTime @default(now())
   isActive   Boolean  @default(true) // deactivate instead of hard-delete
 
+  role       Role     @default(STAFF) // kept in sync with the linked login account's role
+  userId     String?  @unique // the login account created for this employee
+  user       User?    @relation(fields: [userId], references: [id])
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@index([isActive])
+  @@index([createdAt])
   @@map("employees")
 }
 
@@ -194,6 +210,8 @@ model Transaction {
 
   createdAt     DateTime        @default(now())
 
+  @@index([type])
+  @@index([createdAt])
   @@map("transactions")
 }
 
@@ -207,6 +225,7 @@ model AuditLog {
   description String   // human-readable summary, e.g. Updated product "Wireless Keyboard"
   createdAt   DateTime @default(now())
 
+  @@index([createdAt])
   @@map("audit_logs")
 }
 model BusinessSettings {
@@ -232,5 +251,7 @@ model Notification {
   entityId       String?
   createdAt      DateTime @default(now())
 
+  @@index([createdAt])
+  @@index([isRead])
   @@map("notifications")
 }

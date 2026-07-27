@@ -1,5 +1,6 @@
 import { api } from './axios';
-import type { PurchaseOrder } from '@/types/purchasing';
+import type { PaginatedResult } from '@/types/inventory';
+import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/purchasing';
 
 export interface PurchaseOrderItemInput {
     productId: string;
@@ -12,9 +13,18 @@ export interface PurchaseOrderInput {
     items: PurchaseOrderItemInput[];
 }
 
-export async function listPurchaseOrders(): Promise<PurchaseOrder[]> {
-    const { data } = await api.get<{ orders: PurchaseOrder[] }>('/purchases');
-    return data.orders;
+export interface ListPurchaseOrdersParams {
+    search?: string;
+    status?: PurchaseOrderStatus;
+    page?: number;
+    limit?: number;
+}
+
+export async function listPurchaseOrders(
+    params: ListPurchaseOrdersParams = {},
+): Promise<PaginatedResult<PurchaseOrder>> {
+    const { data } = await api.get<PaginatedResult<PurchaseOrder>>('/purchases', { params });
+    return data;
 }
 
 export async function createPurchaseOrder(input: PurchaseOrderInput): Promise<PurchaseOrder> {

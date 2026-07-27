@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, RefreshCw, Plus } from 'lucide-react';
-import { createProduct, updateProduct, type ProductInput } from '@/api/products';
+import { X, RefreshCw, Plus, ImagePlus, Loader2 } from 'lucide-react';
+import { createProduct, updateProduct, uploadProductImage, type ProductInput } from '@/api/products';
 import { createCategory } from '@/api/categories';
-import { toast } from '@/store/toastStore';
+import { toast, toastErrorMessage } from '@/store/toastStore';
 import type { Product, Category } from '@/types/inventory';
+
+const MAX_IMAGE_SIZE_MB = 5;
 
 function generateSku(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -32,6 +34,8 @@ export function ProductFormModal({ product, categories, onClose }: ProductFormMo
   const [skuTouched, setSkuTouched] = useState(isEdit);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<ProductInput>({
     name: product?.name ?? '',
@@ -42,6 +46,7 @@ export function ProductFormModal({ product, categories, onClose }: ProductFormMo
     quantity: product?.quantity ?? 0,
     lowStockThreshold: product?.lowStockThreshold ?? 10,
     categoryId: product?.categoryId ?? undefined,
+    imageUrl: product?.imageUrl ?? undefined,
   });
 
   function handleNameBlur() {
@@ -53,6 +58,35 @@ export function ProductFormModal({ product, categories, onClose }: ProductFormMo
   function handleRegenerateSku() {
     if (!form.name.trim()) return;
     setForm((f) => ({ ...f, sku: generateSku(f.name) }));
+  }
+
+  async function handleImageSelect(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      toast.error(`Image must be ${MAX_IMAGE_SIZE_MB}MB or smaller`);
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const imageUrl = await uploadProductImage(file);
+      setForm((f) => ({ ...f, imageUrl }));
+    } catch (err) {
+      toast.error(toastErrorMessage(err, 'Failed to upload image'));
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  function handleRemoveImage() {
+    setForm((f) => ({ ...f, imageUrl: undefined }));
   }
 
   const mutation = useMutation({
@@ -129,6 +163,47 @@ export function ProductFormModal({ product, categories, onClose }: ProductFormMo
               onBlur={handleNameBlur}
               className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-panel-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[var(--color-muted)] mb-1">Product image</label>
+            <div className="flex items-center gap-3">
+              <div className="h-16 w-16 shrink-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel-2)] overflow-hidden flex items-center justify-center">
+                {uploadingImage ? (
+                  <Loader2 size={18} className="animate-spin text-[var(--color-muted)]" />
+                ) : form.imageUrl ? (
+                  <img src={form.imageUrl} alt="Product preview" className="h-full w-full object-cover" />
+                ) : (
+                  <ImagePlus size={18} className="text-[var(--color-muted)]" />
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="rounded-lg border border-[var(--color-border)] text-xs font-semibold px-3 py-1.5 hover:bg-[var(--color-panel-2)] disabled:opacity-50 transition-colors"
+                >
+                  {uploadingImage ? 'Uploading...' : form.imageUrl ? 'Replace image' : 'Upload image'}
+                </button>
+                {form.imageUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="text-xs text-[var(--color-muted)] hover:text-red-500 transition-colors text-left"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           <div>
@@ -299,7 +374,7 @@ export function ProductFormModal({ product, categories, onClose }: ProductFormMo
             </button>
             <button
               type="submit"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || uploadingImage}
               className="flex-1 rounded-lg bg-[var(--color-accent)] text-black text-sm font-semibold py-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {mutation.isPending ? 'Saving...' : isEdit ? 'Save changes' : 'Add product'}

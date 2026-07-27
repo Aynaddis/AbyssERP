@@ -1,15 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
-import { createSaleSchema } from '../utils/validation/sale.schema';
+import { createSaleSchema, listSalesQuerySchema } from '../utils/validation/sale.schema';
 import { listSales, getSaleById, createSale, cancelSale } from '../services/sale.service';
 import { generateInvoicePdf } from '../services/pdf.service';
 import { logAudit } from '../services/audit.service';
 import { notify, notifyLowStockIfNeeded } from '../services/notification.service';
 import { AppError } from '../middleware/errorHandler';
 
-export async function getSales(_req: Request, res: Response, next: NextFunction) {
+export async function getSales(req: Request, res: Response, next: NextFunction) {
   try {
-    const sales = await listSales();
-    res.status(200).json({ sales });
+    const parsed = listSalesQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      throw new AppError(parsed.error.issues[0].message, 400);
+    }
+
+    const result = await listSales(parsed.data);
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }
@@ -70,6 +75,15 @@ export async function postCancelSale(req: Request, res: Response, next: NextFunc
       entityId: sale.id,
       description: `Cancelled sale #${sale.id.slice(-8).toUpperCase()} — stock restored`,
     });
+
+    await notify({
+      type: 'SALE_CANCELLED',
+      message: `Sale #${sale.id.slice(-8).toUpperCase()} was cancelled — stock restored`,
+      visibleToRoles: ['ADMIN', 'MANAGER'],
+      entityType: 'Sale',
+      entityId: sale.id,
+    });
+
     res.status(200).json({ sale });
   } catch (err) {
     next(err);

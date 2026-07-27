@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
-import { Menu, X, LogOut, User, Settings } from 'lucide-react';
+import { Menu, X, LogOut, Settings } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { navItems } from '@/lib/nav';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -10,7 +10,6 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const isAdmin = user?.role === 'ADMIN';
 
   const visibleItems = navItems.filter(
     (item) => !item.allowedRoles || (user && item.allowedRoles.includes(user.role)),
@@ -21,7 +20,7 @@ export default function AppLayout() {
     : '?';
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] flex">
+    <div className="h-screen bg-[var(--color-bg)] text-[var(--color-text)] flex overflow-hidden">
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 md:hidden"
@@ -69,7 +68,7 @@ export default function AppLayout() {
 
         <div className="px-3 py-3 border-t border-[var(--color-border)] space-y-1">
           <Link
-            to="/profile"
+            to="/settings"
             onClick={() => setMobileOpen(false)}
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
                        text-[var(--color-muted)] hover:bg-[var(--color-panel-2)] hover:text-[var(--color-text)]
@@ -78,22 +77,10 @@ export default function AppLayout() {
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
             ) : (
-              <User size={16} />
-            )}
-            Profile
-          </Link>
-          {isAdmin && (
-            <Link
-              to="/settings"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
-                         text-[var(--color-muted)] hover:bg-[var(--color-panel-2)] hover:text-[var(--color-text)]
-                         transition-colors"
-            >
               <Settings size={16} />
-              Settings
-            </Link>
-          )}
+            )}
+            Settings
+          </Link>
         </div>
 
         <div className="px-3 py-4 border-t border-[var(--color-border)] space-y-2">
@@ -114,7 +101,7 @@ export default function AppLayout() {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-[var(--color-border)]">
+        <header className="shrink-0 flex items-center justify-between px-4 md:px-6 py-3 border-b border-[var(--color-border)]">
           <button className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu size={20} />
           </button>
@@ -122,7 +109,7 @@ export default function AppLayout() {
           <div className="flex items-center gap-3">
             <NotificationBell />
             <ThemeToggle />
-            <Link to="/profile" aria-label="Profile" className="shrink-0">
+            <Link to="/settings" aria-label="Settings" className="shrink-0">
               {user?.avatarUrl ? (
                 <img
                   src={user.avatarUrl}

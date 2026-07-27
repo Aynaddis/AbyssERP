@@ -39,7 +39,7 @@ export function SupplierFormModal({ supplier, onClose }: SupplierFormModalProps)
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-xl bg-[var(--color-panel)] border border-[var(--color-border)]">
+            <div className="w-full max-w-md rounded-xl bg-[var(--color-panel)] border border-[var(--color-border)] max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)]">
                     <h2 className="font-bold text-sm">{isEdit ? 'Edit Supplier' : 'Add Supplier'}</h2>
                     <button onClick={onClose} aria-label="Close">

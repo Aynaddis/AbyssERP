@@ -1,9 +1,12 @@
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
 import healthRoutes from './routes/health.routes';
+import uploadRoutes from './routes/upload.routes';
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
 import categoryRoutes from './routes/category.routes';
@@ -19,14 +22,19 @@ import auditRoutes from './routes/audit.routes';
 import settingsRoutes from './routes/settings.routes';
 import notificationRoutes from './routes/notification.routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { apiRateLimiter } from './middleware/rateLimit.middleware';
 
 
 
 const app = express();
 
 // Core middleware
-app.use(helmet());
-app.use(cors());
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(compression());
+// FRONTEND_URL should be set to your deployed frontend's origin in production.
+// Defaults to the local Vite dev server so nothing breaks in development.
+const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -34,8 +42,14 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
+// Static product image uploads (Day 25)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+app.use('/api', apiRateLimiter);
+
 // Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/uploads', uploadRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);

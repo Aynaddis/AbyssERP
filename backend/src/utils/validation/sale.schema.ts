@@ -21,3 +21,13 @@ export const createSaleSchema = z.object({
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;
+
+export const listSalesQuerySchema = z.object({
+  search: z.string().optional(),
+  dateRange: z.enum(['today', 'week', 'month']).optional(),
+  status: z.enum(['COMPLETED', 'CANCELLED']).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export type ListSalesQuery = z.infer<typeof listSalesQuerySchema>;

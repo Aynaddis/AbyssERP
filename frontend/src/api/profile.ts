@@ -17,6 +17,16 @@ export async function getProfile(): Promise<UserProfile> {
   return data.user;
 }
 
+export async function uploadAvatarImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const { data } = await api.post<{ imageUrl: string }>('/uploads/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.imageUrl;
+}
+
 export async function updateProfile(input: UpdateProfileInput): Promise<UserProfile> {
   const { data } = await api.put<{ user: UserProfile }>('/auth/me', input);
   return data.user;

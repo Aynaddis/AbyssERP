@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { createSupplierSchema, updateSupplierSchema } from '../utils/validation/purchase.schema';
+import { createSupplierSchema, updateSupplierSchema, listSuppliersQuerySchema } from '../utils/validation/purchase.schema';
 import {
   listSuppliers,
   getSupplierById,
@@ -7,12 +7,18 @@ import {
   updateSupplier,
   deleteSupplier,
 } from '../services/supplier.service';
+import { logAudit } from '../services/audit.service';
 import { AppError } from '../middleware/errorHandler';
 
-export async function getSuppliers(_req: Request, res: Response, next: NextFunction) {
+export async function getSuppliers(req: Request, res: Response, next: NextFunction) {
   try {
-    const suppliers = await listSuppliers();
-    res.status(200).json({ suppliers });
+    const parsed = listSuppliersQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      throw new AppError(parsed.error.issues[0].message, 400);
+    }
+
+    const result = await listSuppliers(parsed.data);
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }
@@ -35,6 +41,13 @@ export async function postSupplier(req: Request, res: Response, next: NextFuncti
     }
 
     const supplier = await createSupplier(parsed.data);
+    await logAudit({
+      userId: req.user?.userId,
+      action: 'CREATE',
+      entityType: 'Supplier',
+      entityId: supplier.id,
+      description: `Added supplier "${supplier.name}"`,
+    });
     res.status(201).json({ supplier });
   } catch (err) {
     next(err);
@@ -49,6 +62,13 @@ export async function putSupplier(req: Request, res: Response, next: NextFunctio
     }
 
     const supplier = await updateSupplier(String(req.params.id), parsed.data);
+    await logAudit({
+      userId: req.user?.userId,
+      action: 'UPDATE',
+      entityType: 'Supplier',
+      entityId: supplier.id,
+      description: `Updated supplier "${supplier.name}"`,
+    });
     res.status(200).json({ supplier });
   } catch (err) {
     next(err);
@@ -57,7 +77,16 @@ export async function putSupplier(req: Request, res: Response, next: NextFunctio
 
 export async function removeSupplier(req: Request, res: Response, next: NextFunction) {
   try {
-    await deleteSupplier(String(req.params.id));
+    const id = String(req.params.id);
+    const supplier = await getSupplierById(id);
+    await deleteSupplier(id);
+    await logAudit({
+      userId: req.user?.userId,
+      action: 'DELETE',
+      entityType: 'Supplier',
+      entityId: id,
+      description: `Deleted supplier "${supplier.name}"`,
+    });
     res.status(200).json({ message: 'Supplier deleted' });
   } catch (err) {
     next(err);

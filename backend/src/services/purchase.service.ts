@@ -1,17 +1,37 @@
 import { prisma } from '../config/prisma';
 import type { Prisma } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
-import type { CreatePurchaseOrderInput } from '../utils/validation/purchase.schema';
+import type { CreatePurchaseOrderInput, ListPurchaseOrdersQuery } from '../utils/validation/purchase.schema';
 import { recordTransaction } from './transaction.service';
 
-export async function listPurchaseOrders() {
-  return prisma.purchaseOrder.findMany({
-    include: {
-      supplier: true,
-      items: { include: { product: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+export async function listPurchaseOrders(query: ListPurchaseOrdersQuery) {
+  const { search, status, page, limit } = query;
+
+  const where = {
+    ...(status && { status }),
+    ...(search && {
+      supplier: { name: { contains: search, mode: 'insensitive' as const } },
+    }),
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.purchaseOrder.findMany({
+      where,
+      include: {
+        supplier: true,
+        items: { include: { product: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.purchaseOrder.count({ where }),
+  ]);
+
+  return {
+    items,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
 }
 
 export async function getPurchaseOrderById(id: string) {
@@ -78,18 +98,22 @@ export async function receivePurchaseOrder(id: string) {
   }
 
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    let totalCost = 0;
+    const totalCost = po.items.reduce(
+      (sum: number, item: { quantity: number; unitCost: number }) => sum + item.quantity * item.unitCost,
+      0,
+    );
 
-    for (const item of po.items) {
-      totalCost += item.quantity * item.unitCost;
-      await tx.product.update({
-        where: { id: item.productId },
-        data: {
-          quantity: { increment: item.quantity },
-          costPrice: item.unitCost,
-        },
-      });
-    }
+    await Promise.all(
+      po.items.map((item: { productId: string; quantity: number; unitCost: number }) =>
+        tx.product.update({
+          where: { id: item.productId },
+          data: {
+            quantity: { increment: item.quantity },
+            costPrice: item.unitCost,
+          },
+        }),
+      ),
+    );
 
     const updatedPo = await tx.purchaseOrder.update({
       where: { id },

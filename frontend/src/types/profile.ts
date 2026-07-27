@@ -5,5 +5,6 @@ export interface UserProfile {
   role: 'ADMIN' | 'MANAGER' | 'STAFF';
   isActive: boolean;
   avatarUrl: string | null;
+  mustChangePassword: boolean;
   createdAt: string;
 }

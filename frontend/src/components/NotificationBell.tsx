@@ -4,6 +4,8 @@ import {
   Bell,
   AlertTriangle,
   PackageCheck,
+  ClipboardList,
+  XCircle,
   DollarSign,
   UserPlus,
   CheckCheck,
@@ -17,8 +19,11 @@ import type { Notification } from '@/types/notification';
 
 const typeIcons: Record<string, { icon: typeof Bell; className: string }> = {
   LOW_STOCK: { icon: AlertTriangle, className: 'text-red-500' },
+  PO_CREATED: { icon: ClipboardList, className: 'text-blue-500' },
   PO_RECEIVED: { icon: PackageCheck, className: 'text-green-500' },
+  PO_CANCELLED: { icon: XCircle, className: 'text-red-500' },
   SALE_COMPLETED: { icon: DollarSign, className: 'text-[var(--color-accent)]' },
+  SALE_CANCELLED: { icon: XCircle, className: 'text-red-500' },
   EMPLOYEE_ADDED: { icon: UserPlus, className: 'text-blue-500' },
 };
 
@@ -88,7 +93,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] shadow-lg z-50">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
             <span className="text-sm font-semibold">Notifications</span>
             {unreadCount > 0 && (

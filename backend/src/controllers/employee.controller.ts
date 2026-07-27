@@ -41,13 +41,13 @@ export async function postEmployee(req: Request, res: Response, next: NextFuncti
             throw new AppError(parsed.error.issues[0].message, 400);
         }
 
-        const employee = await createEmployee(parsed.data);
+        const { employee, credentialsEmailSent } = await createEmployee(parsed.data);
         await logAudit({
           userId: req.user?.userId,
           action: 'CREATE',
           entityType: 'Employee',
           entityId: employee.id,
-          description: `Added employee "${employee.name}" to ${employee.department}`,
+          description: `Added employee "${employee.name}" to ${employee.department} and created a ${employee.role} login account`,
         });
 
         await notify({
@@ -58,7 +58,7 @@ export async function postEmployee(req: Request, res: Response, next: NextFuncti
           entityId: employee.id,
         });
 
-        res.status(201).json({ employee });
+        res.status(201).json({ employee, credentialsEmailSent });
     } catch (err) {
         next(err);
     }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Search, AlertTriangle, FileDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, AlertTriangle, FileDown, ImageOff } from 'lucide-react';
 import { listProducts, deleteProduct } from '@/api/products';
 import { listCategories } from '@/api/categories';
 import { downloadInventoryReport } from '@/api/reports';
@@ -147,6 +147,7 @@ export default function InventoryPage() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-muted)]">
+                                <th className="px-4 py-3 font-medium"></th>
                                 <th className="px-4 py-3 font-medium">Product</th>
                                 <th className="px-4 py-3 font-medium">SKU</th>
                                 <th className="px-4 py-3 font-medium">Category</th>
@@ -158,7 +159,7 @@ export default function InventoryPage() {
                         <tbody>
                             {isLoading && (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-[var(--color-muted)]">
+                                    <td colSpan={7} className="px-4 py-8 text-center text-[var(--color-muted)]">
                                         Loading...
                                     </td>
                                 </tr>
@@ -166,7 +167,7 @@ export default function InventoryPage() {
 
                             {isError && (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-red-500">
+                                    <td colSpan={7} className="px-4 py-8 text-center text-red-500">
                                         Failed to load products.
                                     </td>
                                 </tr>
@@ -174,7 +175,7 @@ export default function InventoryPage() {
 
                             {!isLoading && !isError && data?.items.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-[var(--color-muted)]">
+                                    <td colSpan={7} className="px-4 py-8 text-center text-[var(--color-muted)]">
                                         No products found.
                                     </td>
                                 </tr>
@@ -184,6 +185,19 @@ export default function InventoryPage() {
                                 const isLowStock = product.quantity <= product.lowStockThreshold;
                                 return (
                                     <tr key={product.id} className="border-b border-[var(--color-border)] last:border-0">
+                                        <td className="px-4 py-3">
+                                            <div className="h-9 w-9 rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] overflow-hidden flex items-center justify-center">
+                                                {product.imageUrl ? (
+                                                    <img
+                                                        src={product.imageUrl}
+                                                        alt={product.name}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <ImageOff size={14} className="text-[var(--color-muted)]" />
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="px-4 py-3 font-medium">{product.name}</td>
                                         <td className="px-4 py-3 text-[var(--color-muted)]">{product.sku}</td>
                                         <td className="px-4 py-3 text-[var(--color-muted)]">

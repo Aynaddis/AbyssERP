@@ -2,12 +2,15 @@ import { z } from 'zod';
 
 export const createEmployeeSchema = z.object({
   name: z.string().min(2, 'Employee name must be at least 2 characters'),
-  email: z.string().email('Invalid email address').optional(),
+  email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   department: z.string().min(1, 'Department is required'),
   position: z.string().optional(),
   salary: z.number().nonnegative('Salary cannot be negative'),
   hireDate: z.coerce.date().optional(),
+  role: z.enum(['MANAGER', 'STAFF'], {
+    message: 'Role must be either MANAGER or STAFF',
+  }),
 });
 
 export const updateEmployeeSchema = createEmployeeSchema.partial();

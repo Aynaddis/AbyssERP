@@ -18,6 +18,7 @@ export interface ProductInput {
   quantity: number;
   lowStockThreshold: number;
   categoryId?: string;
+  imageUrl?: string;
 }
 
 export async function listProducts(params: ListProductsParams): Promise<PaginatedResult<Product>> {
@@ -41,4 +42,14 @@ export async function deleteProduct(id: string): Promise<void> {
 export async function getLowStockProducts(): Promise<Product[]> {
   const { data } = await api.get<{ products: Product[] }>('/products/low-stock');
   return data.products;
+}
+
+export async function uploadProductImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const { data } = await api.post<{ imageUrl: string }>('/uploads/products/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.imageUrl;
 }
