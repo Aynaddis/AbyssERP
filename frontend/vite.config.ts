@@ -18,10 +18,8 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
       },
-      '/uploads': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      },
+      // No '/uploads' proxy needed anymore — images are served directly
+      // from Cloudinary's CDN via absolute URLs, not from this backend.
     },
   },
 });

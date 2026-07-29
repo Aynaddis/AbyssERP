@@ -1,14 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../middleware/errorHandler';
 
-function handleUploadedFile(subfolder: string) {
+function handleUploadedFile() {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         throw new AppError('No image file was uploaded', 400);
       }
 
-      const imageUrl = `/uploads/${subfolder}/${req.file.filename}`;
+      // multer-storage-cloudinary puts the uploaded file's secure Cloudinary
+      // URL on `path` — that's already a full, absolute, CDN-served URL, so
+      // there's no need to build one relative to this server (which won't
+      // even have the file once Render's ephemeral disk resets).
+      const imageUrl = req.file.path;
       res.status(201).json({ imageUrl });
     } catch (err) {
       next(err);
@@ -16,6 +20,6 @@ function handleUploadedFile(subfolder: string) {
   };
 }
 
-export const postProductImage = handleUploadedFile('products');
-export const postAvatarImage = handleUploadedFile('avatars');
-export const postLogoImage = handleUploadedFile('logos');
+export const postProductImage = handleUploadedFile();
+export const postAvatarImage = handleUploadedFile();
+export const postLogoImage = handleUploadedFile();

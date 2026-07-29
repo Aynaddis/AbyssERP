@@ -1,10 +1,8 @@
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
 import multer, { FileFilterCallback } from 'multer';
+import { CloudinaryStorage } from 'multer-storage-cloudinary-v2';
 import { Request } from 'express';
+import cloudinary from '../config/cloudinary';
 
-const UPLOADS_ROOT = path.join(__dirname, '..', '..', 'uploads');
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 function fileFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCallback) {
@@ -16,22 +14,26 @@ function fileFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCall
 }
 
 /**
- * Builds a single-image-upload middleware that stores into
- * uploads/<subfolder>/ with a randomized filename. Used for product images,
- * user avatars, and the business logo — same validation, different folder.
+ * Builds a single-image-upload middleware that stores directly into
+ * Cloudinary under abysserp/<subfolder>/, instead of the local disk.
+ * Render's filesystem is ephemeral (wiped on every deploy/restart), so
+ * anything saved locally would vanish — Cloudinary gives us persistent,
+ * CDN-served storage that works the same in dev and production.
+ * Used for product images, user avatars, and the business logo — same
+ * validation, different folder.
  */
 function createImageUpload(subfolder: string, maxSizeMb = 5) {
-  const dir = path.join(UPLOADS_ROOT, subfolder);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
-  const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, dir),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      const uniqueName = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`;
-      cb(null, uniqueName);
+  const storage = new CloudinaryStorage({
+    // The cloudinary SDK and this storage engine ship independently-written
+    // type defs for the same upload_stream callback, and they don't line up
+    // structurally (Error|null vs UploadApiErrorResponse|undefined) even
+    // though the runtime shape is compatible — cast to satisfy both.
+    cloudinary: cloudinary as unknown as ConstructorParameters<typeof CloudinaryStorage>[0]['cloudinary'],
+    params: {
+      folder: `abysserp/${subfolder}`,
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+      // Randomized public_id so uploads never collide or overwrite each other.
+      public_id: (_req, file) => `${Date.now()}-${Math.random().toString(16).slice(2)}-${file.originalname.split('.')[0]}`,
     },
   });
 

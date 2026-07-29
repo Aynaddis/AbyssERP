@@ -1,4 +1,3 @@
-import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
@@ -41,9 +40,6 @@ app.use(express.urlencoded({ extended: true }));
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
-
-// Static product image uploads (Day 25)
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use('/api', apiRateLimiter);
 
