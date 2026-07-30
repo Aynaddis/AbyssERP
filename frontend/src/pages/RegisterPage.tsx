@@ -27,8 +27,15 @@ export default function RegisterPage() {
     mutation.mutate({ name, email, password });
   }
 
+  const rawError = (mutation.error as any)?.response?.data?.error ?? mutation.error?.message;
   const errorMessage =
-    (mutation.error as any)?.response?.data?.error ?? mutation.error?.message;
+    typeof rawError === 'string'
+      ? rawError
+      : rawError?.message
+        ? String(rawError.message)
+        : rawError
+          ? 'Something went wrong. Please try again.'
+          : undefined;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)] px-4">

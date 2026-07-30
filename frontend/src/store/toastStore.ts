@@ -39,5 +39,11 @@ export const toast = {
 };
 
 export function toastErrorMessage(err: unknown, fallback: string): string {
-  return (err as any)?.response?.data?.error ?? (err as any)?.message ?? fallback;
+  const raw = (err as any)?.response?.data?.error ?? (err as any)?.message;
+  // Guard against non-string shapes (e.g. a platform-level 404/edge error
+  // like { code, message } instead of our API's plain string error) — a
+  // toast can only render a string, so never pass an object through.
+  if (typeof raw === 'string') return raw;
+  if (raw?.message && typeof raw.message === 'string') return raw.message;
+  return fallback;
 }

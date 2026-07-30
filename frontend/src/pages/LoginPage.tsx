@@ -26,8 +26,19 @@ export default function LoginPage() {
     mutation.mutate({ email, password });
   }
 
+  const rawError = (mutation.error as any)?.response?.data?.error ?? mutation.error?.message;
+  // Guard against non-string error shapes (e.g. a platform-level 404/edge
+  // error like { code, message } instead of our API's plain string error) —
+  // rendering an object directly here is what crashes the whole app with
+  // "Objects are not valid as a React child".
   const errorMessage =
-    (mutation.error as any)?.response?.data?.error ?? mutation.error?.message;
+    typeof rawError === 'string'
+      ? rawError
+      : rawError?.message
+        ? String(rawError.message)
+        : rawError
+          ? 'Something went wrong. Please try again.'
+          : undefined;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)] px-4">
@@ -64,7 +75,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-panel-2)]
                          px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
-              placeholder="you@gmail.com"
+              placeholder="you@example.com"
             />
           </div>
 
