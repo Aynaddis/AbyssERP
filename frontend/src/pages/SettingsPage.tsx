@@ -471,9 +471,8 @@ export default function SettingsPage() {
                 <div className="flex items-start gap-2 text-xs text-[var(--color-muted)] bg-[var(--color-panel-2)] rounded-lg px-3 py-2">
                   <Info size={14} className="shrink-0 mt-0.5" />
                   <p>
-                    Currency and tax rate are saved here but not yet applied to prices, invoices, or
-                    reports elsewhere in the app — that requires updating every price display, which is
-                    tracked as a follow-up.
+                    Currency applies to every price shown across the app. Tax rate is applied to new
+                    sales and invoices going forward — it won't change totals on sales already recorded.
                   </p>
                 </div>
               </div>
@@ -481,8 +480,8 @@ export default function SettingsPage() {
               <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-6 space-y-3">
                 <h3 className="font-semibold text-sm mb-1">Notification Preferences</h3>
                 <p className="text-xs text-[var(--color-muted)] mb-2">
-                  These preferences are saved but not yet wired to actual email delivery for these
-                  specific events.
+                  When enabled, Admins and Managers get an email for these events, in addition to the
+                  in-app notification.
                 </p>
 
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
