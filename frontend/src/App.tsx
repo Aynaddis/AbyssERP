@@ -1,70 +1,83 @@
-import express from 'express';
-import cors from 'cors';
-import compression from 'compression';
-import helmet from 'helmet';
-import morgan from 'morgan';
+import { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
 
-import healthRoutes from './routes/health.routes';
-import uploadRoutes from './routes/upload.routes';
-import authRoutes from './routes/auth.routes';
-import productRoutes from './routes/product.routes';
-import categoryRoutes from './routes/category.routes';
-import supplierRoutes from './routes/supplier.routes';
-import purchaseRoutes from './routes/purchase.routes';
-import saleRoutes from './routes/sale.routes';
-import customerRoutes from './routes/customer.routes';
-import employeeRoutes from './routes/employee.routes';
-import transactionRoutes from './routes/transaction.routes';
-import reportRoutes from './routes/report.routes';
-import dashboardRoutes from './routes/dashboard.routes';
-import auditRoutes from './routes/audit.routes';
-import settingsRoutes from './routes/settings.routes';
-import notificationRoutes from './routes/notification.routes';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { apiRateLimiter } from './middleware/rateLimit.middleware';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import AppLayout from '@/components/AppLayout';
+import { ToastContainer } from '@/components/ToastContainer';
 
+// Route-level code splitting — each page ships as its own chunk instead of
+// one large bundle, so the initial load only pulls in what's needed for
+// whichever route the user lands on first.
+const LandingPage = lazy(() => import('@/pages/LandingPage'));
+const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const InventoryPage = lazy(() => import('@/pages/InventoryPage'));
+const PurchasingPage = lazy(() => import('@/pages/PurchasingPage'));
+const SalesPage = lazy(() => import('@/pages/SalesPage'));
+const HRPage = lazy(() => import('@/pages/HRPage'));
+const FinancePage = lazy(() => import('@/pages/FinancePage'));
+const AuditLogPage = lazy(() => import('@/pages/AuditLogPage'));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-const app = express();
-
-// Core middleware
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(compression());
-// FRONTEND_URL should be set to your deployed frontend's origin in production.
-// Defaults to the local Vite dev server so nothing breaks in development.
-// Strip any trailing slash — the Origin header the browser sends never has
-// one, and CORS requires an exact string match, so 'https://x.com/' would
-// silently never match 'https://x.com' and block every request.
-const allowedOrigin = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
-app.use(cors({ origin: allowedOrigin, credentials: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <Loader2 className="animate-spin text-[var(--color-accent)]" size={28} />
+    </div>
+  );
 }
 
-app.use('/api', apiRateLimiter);
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
-// Routes
-app.use('/api/health', healthRoutes);
-app.use('/api/uploads', uploadRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/suppliers', supplierRoutes);
-app.use('/api/purchases', purchaseRoutes);
-app.use('/api/sales', saleRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/employees', employeeRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/audit-logs', auditRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/notifications', notificationRoutes);
-// 404 + error handling (must be last)
-app.use(notFoundHandler);
-app.use(errorHandler);
+            {/* Authenticated routes — any logged-in role */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppLayout />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/inventory" element={<InventoryPage />} />
+                <Route path="/sales" element={<SalesPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
 
-export default app;
+                {/* Admin + Manager only */}
+                <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} />}>
+                  <Route path="/purchasing" element={<PurchasingPage />} />
+                  <Route path="/hr" element={<HRPage />} />
+                  <Route path="/finance" element={<FinancePage />} />
+                </Route>
+
+                {/* Admin only */}
+                <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                  <Route path="/audit-log" element={<AuditLogPage />} />
+                </Route>
+              </Route>
+            </Route>
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+      <ToastContainer />
+    </QueryClientProvider>
+  );
+}
