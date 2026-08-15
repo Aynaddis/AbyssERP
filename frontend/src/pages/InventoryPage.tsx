@@ -8,12 +8,15 @@ import { downloadBlob } from '@/lib/download';
 import { useAuthStore } from '@/store/authStore';
 import { ProductFormModal } from '@/components/ProductFormModal';
 import { toast, toastErrorMessage } from '@/store/toastStore';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { Product } from '@/types/inventory';
 
 export default function InventoryPage() {
     const queryClient = useQueryClient();
     const hasRole = useAuthStore((s) => s.hasRole);
     const canManage = hasRole('ADMIN', 'MANAGER');
+    const { data: settings } = useBusinessSettings();
 
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -203,7 +206,7 @@ export default function InventoryPage() {
                                         <td className="px-4 py-3 text-[var(--color-muted)]">
                                             {product.category?.name ?? '—'}
                                         </td>
-                                        <td className="px-4 py-3">${product.price.toFixed(2)}</td>
+                                        <td className="px-4 py-3">{formatCurrency(product.price, settings?.currency)}</td>
                                         <td className="px-4 py-3">
                                             <span
                                                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${isLowStock

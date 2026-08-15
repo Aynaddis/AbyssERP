@@ -4,6 +4,8 @@ import { X, RefreshCw, Plus, ImagePlus, Loader2 } from 'lucide-react';
 import { createProduct, updateProduct, uploadProductImage, type ProductInput } from '@/api/products';
 import { createCategory } from '@/api/categories';
 import { toast, toastErrorMessage } from '@/store/toastStore';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { Product, Category } from '@/types/inventory';
 
 const MAX_IMAGE_SIZE_MB = 5;
@@ -30,6 +32,7 @@ interface ProductFormModalProps {
 export function ProductFormModal({ product, categories, onClose }: ProductFormModalProps) {
   const queryClient = useQueryClient();
   const isEdit = Boolean(product);
+  const { data: settings } = useBusinessSettings();
 
   const [skuTouched, setSkuTouched] = useState(isEdit);
   const [addingCategory, setAddingCategory] = useState(false);
@@ -119,9 +122,9 @@ export function ProductFormModal({ product, categories, onClose }: ProductFormMo
     e.preventDefault();
 
     const suspiciouslyHigh: string[] = [];
-    if (form.price > 1_000_000) suspiciouslyHigh.push(`price of $${form.price.toLocaleString()}`);
+    if (form.price > 1_000_000) suspiciouslyHigh.push(`price of ${formatCurrency(form.price, settings?.currency)}`);
     if (form.costPrice && form.costPrice > 1_000_000)
-      suspiciouslyHigh.push(`cost price of $${form.costPrice.toLocaleString()}`);
+      suspiciouslyHigh.push(`cost price of ${formatCurrency(form.costPrice, settings?.currency)}`);
     if (form.quantity > 1_000_000)
       suspiciouslyHigh.push(`quantity of ${form.quantity.toLocaleString()} units`);
 

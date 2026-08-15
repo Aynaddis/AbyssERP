@@ -80,7 +80,7 @@ export async function putProduct(req: Request, res: Response, next: NextFunction
     });
 
     if (stockChanged && product.quantity <= product.lowStockThreshold) {
-      await notifyLowStockIfNeeded(product.id, product.name, product.quantity);
+      await notifyLowStockIfNeeded(product.id, product.name, product.quantity, product.lowStockThreshold);
     }
 
     res.status(200).json({ product });

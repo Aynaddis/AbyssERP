@@ -3,7 +3,7 @@ import { createSaleSchema, listSalesQuerySchema } from '../utils/validation/sale
 import { listSales, getSaleById, createSale, cancelSale } from '../services/sale.service';
 import { generateInvoicePdf } from '../services/pdf.service';
 import { logAudit } from '../services/audit.service';
-import { notify, notifyLowStockIfNeeded } from '../services/notification.service';
+import { notify, notifySaleCompleted, notifyLowStockIfNeeded } from '../services/notification.service';
 import { AppError } from '../middleware/errorHandler';
 
 export async function getSales(req: Request, res: Response, next: NextFunction) {
@@ -45,17 +45,11 @@ export async function postSale(req: Request, res: Response, next: NextFunction) 
       description: `Completed sale #${sale.id.slice(-8).toUpperCase()} totaling $${sale.totalAmount.toFixed(2)} — stock decremented`,
     });
 
-    await notify({
-      type: 'SALE_COMPLETED',
-      message: `Sale #${sale.id.slice(-8).toUpperCase()} completed — $${sale.totalAmount.toFixed(2)}`,
-      visibleToRoles: ['ADMIN', 'MANAGER'],
-      entityType: 'Sale',
-      entityId: sale.id,
-    });
+    await notifySaleCompleted(sale);
 
     for (const item of sale.items) {
       if (item.product.quantity <= item.product.lowStockThreshold) {
-        await notifyLowStockIfNeeded(item.product.id, item.product.name, item.product.quantity);
+        await notifyLowStockIfNeeded(item.product.id, item.product.name, item.product.quantity, item.product.lowStockThreshold);
       }
     }
 

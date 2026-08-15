@@ -18,11 +18,14 @@ import { TopProductsCard } from '@/components/charts/TopProductsCard';
 import { RecentTransactionsCard } from '@/components/charts/RecentTransactionsCard';
 import { LowStockCard } from '@/components/charts/LowStockCard';
 import { RecentActivityCard } from '@/components/charts/RecentActivityCard';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const hasRole = useAuthStore((s) => s.hasRole);
   const canSeeActivity = hasRole('ADMIN', 'MANAGER');
+  const { data: settings } = useBusinessSettings();
 
   const { data: kpis, isLoading: kpisLoading } = useQuery({
     queryKey: ['dashboard', 'kpis'],
@@ -56,8 +59,8 @@ export default function DashboardPage() {
 
       {kpis && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <KpiCard label="Today's Sales" value={`$${kpis.todaySales.toFixed(2)}`} icon={DollarSign} />
-          <KpiCard label="Monthly Revenue" value={`$${kpis.monthlyRevenue.toFixed(2)}`} icon={TrendingUp} />
+          <KpiCard label="Today's Sales" value={formatCurrency(kpis.todaySales, settings?.currency)} icon={DollarSign} />
+          <KpiCard label="Monthly Revenue" value={formatCurrency(kpis.monthlyRevenue, settings?.currency)} icon={TrendingUp} />
           <KpiCard label="Total Products" value={String(kpis.totalProducts)} icon={Package} />
           <KpiCard label="Total Employees" value={String(kpis.totalEmployees)} icon={Users} />
           <KpiCard label="Total Suppliers" value={String(kpis.totalSuppliers)} icon={Truck} />
@@ -66,7 +69,7 @@ export default function DashboardPage() {
             value={String(kpis.pendingPurchaseOrders)}
             icon={ShoppingCart}
           />
-          <KpiCard label="Inventory Value" value={`$${kpis.inventoryValue.toFixed(2)}`} icon={Archive} />
+          <KpiCard label="Inventory Value" value={formatCurrency(kpis.inventoryValue, settings?.currency)} icon={Archive} />
           <KpiCard
             label="Low Stock Items"
             value={String(kpis.lowStockCount)}

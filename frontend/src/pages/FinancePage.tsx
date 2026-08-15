@@ -3,9 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { listTransactions } from '@/api/transactions';
 import { TransactionFormModal } from '@/components/TransactionFormModal';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { TransactionType } from '@/types/finance';
 
 export default function FinancePage() {
+    const { data: settings } = useBusinessSettings();
     const [typeFilter, setTypeFilter] = useState<TransactionType | ''>('');
     const [page, setPage] = useState(1);
     const [showForm, setShowForm] = useState(false);
@@ -99,7 +102,7 @@ export default function FinancePage() {
                                             ) : (
                                                 <ArrowDownRight size={14} />
                                             )}
-                                            ${tx.amount.toFixed(2)}
+                                            {formatCurrency(tx.amount, settings?.currency)}
                                         </div>
                                     </td>
                                 </tr>

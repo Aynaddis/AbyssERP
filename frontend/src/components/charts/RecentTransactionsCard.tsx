@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { listTransactions } from '@/api/transactions';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 
 export function RecentTransactionsCard() {
+    const { data: settings } = useBusinessSettings();
     const { data, isLoading } = useQuery({
         queryKey: ['transactions', { forDashboard: true }],
         queryFn: () => listTransactions({ page: 1, limit: 5 }),
@@ -32,7 +35,7 @@ export function RecentTransactionsCard() {
                                 }`}
                         >
                             {tx.type === 'INCOME' ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                            ${tx.amount.toFixed(2)}
+                            {formatCurrency(tx.amount, settings?.currency)}
                         </div>
                     </div>
                 ))}

@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { AppError } from '../middleware/errorHandler';
 import { getSaleById } from './sale.service';
+import { getSettings } from './settings.service';
 
 const ACCENT = rgb(0.94, 0.65, 0);
 const DANGER = rgb(0.86, 0.2, 0.2);
@@ -16,6 +17,13 @@ export async function generateInvoicePdf(saleId: string): Promise<Uint8Array> {
   if (!sale) {
     throw new AppError('Sale not found', 404);
   }
+
+  const { currency } = await getSettings();
+  const money = (amount: number) => `${currency} ${amount.toFixed(2)}`;
+  // Derive the tax rate that was actually applied to this sale from its own
+  // snapshotted subtotal/tax figures, rather than the business's *current*
+  // rate — the two can differ if the rate was changed since this sale.
+  const appliedTaxRate = sale.subtotal > 0 ? (sale.taxAmount / sale.subtotal) * 100 : 0;
 
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]);
@@ -68,8 +76,8 @@ export async function generateInvoicePdf(saleId: string): Promise<Uint8Array> {
   for (const item of sale.items) {
     page.drawText(item.product.name, { x: 58, y, size: 10, font });
     page.drawText(String(item.quantity), { x: 320, y, size: 10, font });
-    page.drawText(`$${item.unitPrice.toFixed(2)}`, { x: 390, y, size: 10, font });
-    page.drawText(`$${item.subtotal.toFixed(2)}`, { x: 480, y, size: 10, font });
+    page.drawText(money(item.unitPrice), { x: 390, y, size: 10, font });
+    page.drawText(money(item.subtotal), { x: 480, y, size: 10, font });
     y -= 22;
   }
 
@@ -80,10 +88,21 @@ export async function generateInvoicePdf(saleId: string): Promise<Uint8Array> {
     thickness: 1,
     color: rgb(0.85, 0.85, 0.85),
   });
-  y -= 26;
+  y -= 22;
 
+  page.drawText('Subtotal', { x: 390, y, size: 10, font });
+  page.drawText(money(sale.subtotal), { x: 480, y, size: 10, font });
+  y -= 18;
+
+  if (sale.taxAmount > 0) {
+    page.drawText(`Tax (${appliedTaxRate.toFixed(1)}%)`, { x: 390, y, size: 10, font });
+    page.drawText(money(sale.taxAmount), { x: 480, y, size: 10, font });
+    y -= 18;
+  }
+
+  y -= 8;
   page.drawText('Total', { x: 390, y, size: 12, font: fontBold });
-  page.drawText(`$${sale.totalAmount.toFixed(2)}`, { x: 480, y, size: 12, font: fontBold, color: ACCENT });
+  page.drawText(money(sale.totalAmount), { x: 480, y, size: 12, font: fontBold, color: ACCENT });
 
   page.drawText('Thank you for your business.', {
     x: 50,

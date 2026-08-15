@@ -32,7 +32,10 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(compression());
 // FRONTEND_URL should be set to your deployed frontend's origin in production.
 // Defaults to the local Vite dev server so nothing breaks in development.
-const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+// Strip any trailing slash — the Origin header the browser sends never has
+// one, and CORS requires an exact string match, so 'https://x.com/' would
+// silently never match 'https://x.com' and block every request.
+const allowedOrigin = (process.env.FRONTEND_URL || 'https://abyss-erp-one.vercel.app').replace(/\/+$/, '');
 app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

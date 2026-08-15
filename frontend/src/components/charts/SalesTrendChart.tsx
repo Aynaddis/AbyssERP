@@ -1,4 +1,6 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { SalesTrendPoint } from '@/types/dashboard';
 
 interface SalesTrendChartProps {
@@ -6,6 +8,7 @@ interface SalesTrendChartProps {
 }
 
 export function SalesTrendChart({ data }: SalesTrendChartProps) {
+    const { data: settings } = useBusinessSettings();
     const chartData = data.map((d) => ({
         label: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
         total: d.total,
@@ -36,7 +39,7 @@ export function SalesTrendChart({ data }: SalesTrendChartProps) {
                             borderRadius: 8,
                             fontSize: 12,
                         }}
-                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Sales']}
+                        formatter={(value: number) => [formatCurrency(value, settings?.currency), 'Sales']}
                     />
                     <Area
                         type="monotone"

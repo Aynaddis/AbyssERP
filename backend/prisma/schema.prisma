@@ -150,7 +150,9 @@ model SalesOrder {
   customerId  String?
   customer    Customer?        @relation(fields: [customerId], references: [id])
   status      SaleStatus       @default(COMPLETED)
-  totalAmount Float
+  subtotal    Float            @default(0) // sum of item subtotals, before tax
+  taxAmount   Float            @default(0) // computed from BusinessSettings.taxRate at sale time
+  totalAmount Float            // subtotal + taxAmount — the amount actually charged
 
   items       SalesOrderItem[]
 

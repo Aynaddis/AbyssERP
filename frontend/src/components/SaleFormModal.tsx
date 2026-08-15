@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { createSale } from '@/api/sales';
 import { listProducts } from '@/api/products';
-import { toast } from '@/store/toastStore';
+import { toast, toastErrorMessage } from '@/store/toastStore';
+import { formatCurrency, applyTax } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { Customer } from '@/types/sales';
 
 interface SaleFormModalProps {
@@ -21,6 +23,7 @@ let keyCounter = 0;
 
 export function SaleFormModal({ customers, onClose }: SaleFormModalProps) {
     const queryClient = useQueryClient();
+    const { data: settings } = useBusinessSettings();
 
     const [customerId, setCustomerId] = useState('');
     const [items, setItems] = useState<LineItem[]>([{ key: keyCounter++, productId: '', quantity: 1 }]);
@@ -79,12 +82,13 @@ export function SaleFormModal({ customers, onClose }: SaleFormModalProps) {
     }
 
     const hasStockError = items.some((item) => stockErrorFor(item.productId));
-    const total = items.reduce((sum, item) => {
+    const subtotal = items.reduce((sum, item) => {
         const product = products.find((p) => p.id === item.productId);
         return sum + (product ? product.price * item.quantity : 0);
     }, 0);
+    const { taxAmount, total } = applyTax(subtotal, settings?.taxRate);
 
-    const errorMessage = (mutation.error as any)?.response?.data?.error ?? mutation.error?.message;
+    const errorMessage = mutation.error ? toastErrorMessage(mutation.error, 'Failed to record sale') : undefined;
     const canSubmit = items.every((i) => i.productId && i.quantity > 0) && !hasStockError;
 
     return (
@@ -165,7 +169,7 @@ export function SaleFormModal({ customers, onClose }: SaleFormModalProps) {
                                                 <option value="">Select product...</option>
                                                 {products.map((p) => (
                                                     <option key={p.id} value={p.id}>
-                                                        {p.name} (${p.price.toFixed(2)}) — {p.quantity} in stock
+                                                        {p.name} ({formatCurrency(p.price, settings?.currency)}) — {p.quantity} in stock
                                                     </option>
                                                 ))}
                                             </select>
@@ -180,7 +184,7 @@ export function SaleFormModal({ customers, onClose }: SaleFormModalProps) {
                                                     }`}
                                             />
                                             <div className="w-20 flex items-center justify-end text-xs font-medium pt-2">
-                                                {product ? `$${(product.price * item.quantity).toFixed(2)}` : '—'}
+                                                {product ? formatCurrency(product.price * item.quantity, settings?.currency) : '—'}
                                             </div>
                                             <button
                                                 type="button"
@@ -204,9 +208,21 @@ export function SaleFormModal({ customers, onClose }: SaleFormModalProps) {
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-sm font-semibold pt-2 border-t border-[var(--color-border)]">
-                        <span className="text-[var(--color-muted)]">Total</span>
-                        <span>${total.toFixed(2)}</span>
+                    <div className="space-y-1 pt-2 border-t border-[var(--color-border)]">
+                        <div className="flex items-center justify-between text-xs text-[var(--color-muted)]">
+                            <span>Subtotal</span>
+                            <span>{formatCurrency(subtotal, settings?.currency)}</span>
+                        </div>
+                        {settings?.taxRate ? (
+                            <div className="flex items-center justify-between text-xs text-[var(--color-muted)]">
+                                <span>Tax ({settings.taxRate}%)</span>
+                                <span>{formatCurrency(taxAmount, settings?.currency)}</span>
+                            </div>
+                        ) : null}
+                        <div className="flex items-center justify-between text-sm font-semibold">
+                            <span>Total</span>
+                            <span>{formatCurrency(total, settings?.currency)}</span>
+                        </div>
                     </div>
 
                     <div className="flex gap-2 pt-2">

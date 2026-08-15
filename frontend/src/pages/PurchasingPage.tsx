@@ -7,6 +7,8 @@ import { useAuthStore } from '@/store/authStore';
 import { SupplierFormModal } from '@/components/SupplierFormModal';
 import { PurchaseOrderFormModal } from '@/components/PurchaseOrderFormModal';
 import { toast, toastErrorMessage } from '@/store/toastStore';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { Supplier, PurchaseOrderStatus } from '@/types/purchasing';
 
 const statusStyles: Record<string, string> = {
@@ -18,6 +20,7 @@ const statusStyles: Record<string, string> = {
 export default function PurchasingPage() {
   const queryClient = useQueryClient();
   const hasRole = useAuthStore((s) => s.hasRole);
+  const { data: settings } = useBusinessSettings();
   const canManage = hasRole('ADMIN', 'MANAGER');
   const canDeleteSupplier = hasRole('ADMIN');
 
@@ -200,7 +203,7 @@ export default function PurchasingPage() {
                       <tr key={order.id} className="border-b border-[var(--color-border)] last:border-0">
                         <td className="px-4 py-3 font-medium">{order.supplier.name}</td>
                         <td className="px-4 py-3 text-[var(--color-muted)]">{order.items.length} item(s)</td>
-                        <td className="px-4 py-3">${total.toFixed(2)}</td>
+                        <td className="px-4 py-3">{formatCurrency(total, settings?.currency)}</td>
                         <td className="px-4 py-3">
                           <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[order.status]}`}>
                             {order.status}

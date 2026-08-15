@@ -86,3 +86,69 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+interface LowStockAlertInput {
+  to: string[];
+  productName: string;
+  quantity: number;
+  threshold: number;
+}
+
+export async function sendLowStockAlertEmail({ to, productName, quantity, threshold }: LowStockAlertInput) {
+  if (to.length === 0) return;
+
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const appUrl = process.env.APP_URL || 'http://localhost:5173';
+
+  await getTransporter().sendMail({
+    from,
+    to,
+    subject: `Low stock alert: ${productName}`,
+    text: [
+      `"${productName}" is running low — only ${quantity} unit(s) left (threshold: ${threshold}).`,
+      '',
+      `Restock it at ${appUrl}/inventory`,
+    ].join('\n'),
+    html: `
+      <div style="font-family: sans-serif; font-size: 15px; color: #1a1a1a;">
+        <p><strong>${escapeHtml(productName)}</strong> is running low — only
+        <strong>${quantity}</strong> unit(s) left (threshold: ${threshold}).</p>
+        <p><a href="${appUrl}/inventory">Restock it in AbyssERP</a></p>
+      </div>
+    `,
+  });
+}
+
+interface NewSaleAlertInput {
+  to: string[];
+  saleId: string;
+  totalAmount: number;
+  currency: string;
+}
+
+export async function sendNewSaleAlertEmail({ to, saleId, totalAmount, currency }: NewSaleAlertInput) {
+  if (to.length === 0) return;
+
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const appUrl = process.env.APP_URL || 'http://localhost:5173';
+  const invoiceRef = saleId.slice(-8).toUpperCase();
+  const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
+
+  await getTransporter().sendMail({
+    from,
+    to,
+    subject: `New sale completed — #${invoiceRef}`,
+    text: [
+      `Sale #${invoiceRef} was just completed for ${formattedTotal}.`,
+      '',
+      `View it at ${appUrl}/sales`,
+    ].join('\n'),
+    html: `
+      <div style="font-family: sans-serif; font-size: 15px; color: #1a1a1a;">
+        <p>Sale <strong>#${escapeHtml(invoiceRef)}</strong> was just completed for
+        <strong>${escapeHtml(formattedTotal)}</strong>.</p>
+        <p><a href="${appUrl}/sales">View it in AbyssERP</a></p>
+      </div>
+    `,
+  });
+}

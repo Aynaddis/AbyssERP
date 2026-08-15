@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import type { CreateSaleInput, ListSalesQuery } from '../utils/validation/sale.schema';
 import { recordTransaction } from './transaction.service';
+import { getSettings } from './settings.service';
 
 function startOfRange(range: 'today' | 'week' | 'month'): Date {
   const now = new Date();
@@ -107,19 +108,27 @@ export async function createSale(input: CreateSaleInput) {
     }
   }
 
+  const { taxRate } = await getSettings();
+
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    let totalAmount = 0;
+    let subtotal = 0;
     const itemsData = input.items.map((item) => {
       const product = productMap.get(item.productId)!;
-      const subtotal = product.price * item.quantity;
-      totalAmount += subtotal;
+      const itemSubtotal = product.price * item.quantity;
+      subtotal += itemSubtotal;
       return {
         productId: item.productId,
         quantity: item.quantity,
         unitPrice: product.price,
-        subtotal,
+        subtotal: itemSubtotal,
       };
     });
+
+    // Tax is computed from the business's configured rate at the moment of
+    // sale and snapshotted onto the order — later changes to the rate in
+    // Settings must never retroactively alter historical invoices/reports.
+    const taxAmount = taxRate ? subtotal * (taxRate / 100) : 0;
+    const totalAmount = subtotal + taxAmount;
 
     await Promise.all(
       input.items.map((item) =>
@@ -134,6 +143,8 @@ export async function createSale(input: CreateSaleInput) {
       data: {
         customerId: input.customerId,
         status: 'COMPLETED',
+        subtotal,
+        taxAmount,
         totalAmount,
         items: { create: itemsData },
       },

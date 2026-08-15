@@ -8,6 +8,8 @@ import { downloadBlob } from '@/lib/download';
 import { useAuthStore } from '@/store/authStore';
 import { SaleFormModal } from '@/components/SaleFormModal';
 import { toast, toastErrorMessage } from '@/store/toastStore';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { SaleStatus } from '@/types/sales';
 
 const statusStyles: Record<string, string> = {
@@ -19,6 +21,7 @@ export default function SalesPage() {
   const queryClient = useQueryClient();
   const hasRole = useAuthStore((s) => s.hasRole);
   const canCancel = hasRole('ADMIN', 'MANAGER');
+  const { data: settings } = useBusinessSettings();
 
   const [showForm, setShowForm] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -181,7 +184,7 @@ export default function SalesPage() {
                 <tr key={sale.id} className="border-b border-[var(--color-border)] last:border-0">
                   <td className="px-4 py-3 font-medium">{sale.customer?.name ?? 'Walk-in'}</td>
                   <td className="px-4 py-3 text-[var(--color-muted)]">{sale.items.length} item(s)</td>
-                  <td className="px-4 py-3">${sale.totalAmount.toFixed(2)}</td>
+                  <td className="px-4 py-3">{formatCurrency(sale.totalAmount, settings?.currency)}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[sale.status]}`}>
                       {sale.status}

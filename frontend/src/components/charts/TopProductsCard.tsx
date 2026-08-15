@@ -1,3 +1,5 @@
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { TopProduct } from '@/types/dashboard';
 
 interface TopProductsCardProps {
@@ -5,6 +7,7 @@ interface TopProductsCardProps {
 }
 
 export function TopProductsCard({ data }: TopProductsCardProps) {
+    const { data: settings } = useBusinessSettings();
     const maxUnits = Math.max(...data.map((p) => p.unitsSold), 1);
 
     return (
@@ -25,7 +28,7 @@ export function TopProductsCard({ data }: TopProductsCardProps) {
                                     {product.name}
                                 </span>
                                 <span className="text-[var(--color-muted)] shrink-0">
-                                    {product.unitsSold} sold · ${product.revenue.toFixed(2)}
+                                    {product.unitsSold} sold · {formatCurrency(product.revenue, settings?.currency)}
                                 </span>
                             </div>
                             <div className="h-1.5 rounded-full bg-[var(--color-panel-2)] overflow-hidden">

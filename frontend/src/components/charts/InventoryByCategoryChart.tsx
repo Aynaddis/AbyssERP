@@ -1,4 +1,6 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { InventoryByCategory } from '@/types/dashboard';
 
 interface InventoryByCategoryChartProps {
@@ -8,6 +10,7 @@ interface InventoryByCategoryChartProps {
 const COLORS = ['#f0a500', '#4a90e2', '#2ecc71', '#e17055', '#9b59b6', '#1abc9c'];
 
 export function InventoryByCategoryChart({ data }: InventoryByCategoryChartProps) {
+    const { data: settings } = useBusinessSettings();
     const chartData = data.map((d) => ({ name: d.category, value: d.totalValue }));
 
     if (chartData.length === 0) {
@@ -45,7 +48,7 @@ export function InventoryByCategoryChart({ data }: InventoryByCategoryChartProps
                             borderRadius: 8,
                             fontSize: 12,
                         }}
-                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Value']}
+                        formatter={(value: number) => [formatCurrency(value, settings?.currency), 'Value']}
                     />
                     <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-muted)' }} />
                 </PieChart>

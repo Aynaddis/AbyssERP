@@ -4,6 +4,8 @@ import { X, Plus, Trash2 } from 'lucide-react';
 import { createPurchaseOrder, type PurchaseOrderItemInput } from '@/api/purchases';
 import { listProducts } from '@/api/products';
 import { toast } from '@/store/toastStore';
+import { formatCurrency } from '@/utils/currency';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import type { Supplier } from '@/types/purchasing';
 
 interface PurchaseOrderFormModalProps {
@@ -19,6 +21,7 @@ let keyCounter = 0;
 
 export function PurchaseOrderFormModal({ suppliers, onClose }: PurchaseOrderFormModalProps) {
     const queryClient = useQueryClient();
+    const { data: settings } = useBusinessSettings();
 
     const [supplierId, setSupplierId] = useState('');
     const [items, setItems] = useState<LineItem[]>([
@@ -177,7 +180,7 @@ export function PurchaseOrderFormModal({ suppliers, onClose }: PurchaseOrderForm
 
                     <div className="flex items-center justify-between text-sm font-semibold pt-2 border-t border-[var(--color-border)]">
                         <span className="text-[var(--color-muted)]">Total cost</span>
-                        <span>${total.toFixed(2)}</span>
+                        <span>{formatCurrency(total, settings?.currency)}</span>
                     </div>
 
                     <div className="flex gap-2 pt-2">
